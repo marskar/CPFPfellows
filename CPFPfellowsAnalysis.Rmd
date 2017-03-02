@@ -1,0 +1,174 @@
+---
+title: "MilestoneReportMWS"
+author: "Martin Skarzynski"
+date: "February 17, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# Current CPFP Fellows Analysis
+
+
+The first step is to download and read in the data. 
+
+## Download and read in the data
+The data are available at this url: https://cpfp.nci.nih.gov/about-us/fellows.txt
+### Download the data
+```{r}
+
+## Download the raw data file...
+## Unless you already have it in your working directory
+if (!file.exists("fellows.txt")) {
+  download.file("https://cpfp.nci.nih.gov/about-us/fellows.txt",
+  destfile = paste(getwd(),"/fellows.txt", sep=""))
+}
+```
+### Load filepath into memory
+```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
+## You can set your working directory to final/en_US...
+## and then use the filenames (wrapped in quotes)...
+## but I prefer to load the path into memory...
+path<-paste(getwd(),"/fellows.txt", sep="")
+```
+### Read in the data
+```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
+## First, I will read in all of the data, but later I will take a subsample.
+## The raw binary (rb) method was the only way I could read in the full news data set. 
+## I skipped the embedded nuls in all, though these were only in the twitter data set.
+con <- file(path, open="rb")
+dat<-readLines(con, skipNul = TRUE, encoding = "ASCII")
+close(con)
+
+
+## Remove contact info
+dat2<-gsub("^Phone.{1,}|^Email.*|^Contact.*", "", dat, ignore.case = TRUE)
+
+## Remove empty lines
+dat3<-dat2[which(dat2!="")]
+dat4<-dat3[which(dat3!=" ")]
+## dat2<-dat[-which(dat=="")] #Alternative solution
+
+##Manually input missing values
+## Michelle Silver
+
+year<- grep("^Year of entry.*", dat4, ignore.case = TRUE, value = TRUE)
+year<-gsub("Year of entry ", "", year, ignore.case = TRUE)
+year
+class(year)
+
+yrtbl<-table(year)
+
+yeardf<-as.data.frame(yrtbl)
+
+names(yeardf) <- c("Year","Count")
+
+doc<- grep("^Doctoral degree.*|PhD.*", dat4, ignore.case = TRUE, value = TRUE)
+doc<-gsub("Doctoral degree ", "", doc, ignore.case = TRUE)
+
+doc<- strsplit(doc, ",")
+doc<- unlist(doc)
+docyear<-grep("\\(.*\\)", doc, ignore.case = TRUE, value = TRUE)
+docyear<-gsub("\\(|\\)|[a-z]| ","", docyear, ignore.case = TRUE)
+doc<-grep(".*University.*|.*College.*|.*Institute.*|.*School.*|.*Academy.*", doc, ignore.case = TRUE, value = TRUE)
+doc<-gsub("^ |^  |\\(.*\\)", "", doc, ignore.case = TRUE)
+
+doctbl<-table(doc)
+
+docdf<-as.data.frame(doctbl)
+
+names(docdf) <- c("University","Count")
+
+print(dat4)
+mast<-grep("^M.{1,3} ", dat4, ignore.case = TRUE, value = TRUE)
+mast<-gsub("(.if applicable. )", "", mast, ignore.case = TRUE)
+mast
+
+mastyear
+mastyear<- strsplit(mast, " ")
+mastyear<- unlist(mastyear)
+mastyear<-grep("[1-9]+", mastyear, ignore.case = TRUE, value = TRUE)
+
+mast<- strsplit(mast, ",")
+mast<- unlist(mast)
+mast<-grep(".*University.*|.*College.*|.*Institute.*|.*School.*|.*Academy.*", mast, ignore.case = TRUE, value = TRUE)
+
+mast<-gsub("^M.{1,3} |20..|Behavioral Sciences|\\(|\\)", "", mast, ignore.case = TRUE)
+
+mast<-gsub("^ |^  ", "", mast, ignore.case = TRUE)
+
+masttbl<-table(mast)
+
+mastdf<-as.data.frame(masttbl)
+
+names(mastdf) <- c("University","Count")
+
+
+doc<- grep("^Doctoral degree.*|PhD.*", dat4, ignore.case = TRUE, value = TRUE)
+doc
+docyear
+
+mph<-grep("^M.{1,3} ", dat4, ignore.case = TRUE, value = TRUE)
+mph<-gsub("(.if applicable. )", "", mph, ignore.case = TRUE)
+
+mph
+
+
+mph<- strsplit(mph, ",")
+mph<- unlist(mph)
+mph<-grep(".*University.*|.*College.*|.*Institute.*|.*School.*|.*Academy.*", mph, ignore.case = TRUE, value = TRUE)
+
+mph<-gsub("^M.{1,3} |20..|Behavioral Sciences|\\(|\\)", "", mph, ignore.case = TRUE)
+
+mph<-gsub("^ |^  ", "", mph, ignore.case = TRUE)
+
+mphtbl<-table(mph)
+
+mphdf<-as.data.frame(mphtbl)
+
+names(mphdf) <- c("University","Count")
+
+
+install.packages("ggplot2")
+library(ggplot2)
+print(mphtbl)
+
+str(mphtbl)
+qplot(mphtbl[2,], data=mphtbl, geom="bar", fill=names(mphtbl))
+
+RI <- grep("^Research Interests ", dat4, ignore.case = TRUE, value = TRUE)
+RI<-gsub("Research Interests ", "", RI, ignore.case = TRUE)
+PP <- grep("Primary Preceptor", dat4, ignore.case = TRUE, value = TRUE)
+PP<-gsub("Primary Preceptor/Branch", "", PP, ignore.case = TRUE)
+mph
+RI
+PP
+?gsub
+```
+
+
+
+
+install.packages("tm")
+library(tm)
+datNoWS<- stripWhitespace(dat)
+print(datNoWS)
+
+
+## Exploratory Data Analysis Conclusions
+Based on the plots above, it appears that the data cleaning and tokenization steps worked.
+I think removing single letter words does not hurt. I concluded that I should not remove two-letter words, as the lack of the word "of" may result in some meaning being lost.
+I believe these steps work well but they take a long time and I need to think about efficiency when training my model.
+
+## Observations
+I noticed foreign words (mostly in Spanish) in the output files. These may cause problems, so I will work on a way of removing the words using a Spanish dictionary (word list). This will be similar to the approach of removing profanity. It would be great to make an app that could translate foreign words on the fly so that they can also be used in the analysis. That being said, I think however it will be better to simply remove foreign words to. 
+
+## Next steps
+For my app, I am interested in providing functionality for hash tags from the twitter data. The idea is to predict what may follow a hash tag, just like other words. Hashtags by themselves are mphgrams even if they represent multiple words (e.g. #HungryLikeAWolf), but they may be preceeded by other words. The predictive model would first try to predict by a quadgram, then a trigram, then a bigram and the word itself. 
+In addition to word buttons to insert the text, I plan to show the output as a wordcloud wherein the word size is the probability of that word following what the user typed in.
+
+
+
+
