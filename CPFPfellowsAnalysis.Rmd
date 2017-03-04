@@ -79,7 +79,7 @@ yeardf<-as.data.frame(yrtbl)
 names(yeardf) <- c("Year","Count")
 ```
 
-## Make tables of doctoral degrees and years the degrees were obtained
+## Generate dataframe of doctoral degrees and years the degrees were obtained
 
 ```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
 
@@ -97,7 +97,11 @@ doc<-gsub("^ |^  |\\(.*\\)", "", doc, ignore.case = TRUE)
 docFinal<-cbind(doc,docyear)
 docFinal<-as.data.frame(docFinal)
 names(docFinal) <- c("University","docYear")
+```
 
+## Obtain doctoral degree counts by university
+
+```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
 doctbl<-table(doc)
 docyrtbl<-table(docyear)
 docdf<-as.data.frame(doctbl)
@@ -105,17 +109,33 @@ docyrdf<-as.data.frame(docyrtbl)
 
 names(docdf) <- c("University","Count")
 ```
-## Make tables of master degrees and years the degrees were obtained
+
+## Generate dataframe of master degrees and years the degrees were obtained
 
 
 ```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
 dat4
 mph<-grep("^MPH |^MHS|^MSPH", dat4, ignore.case = FALSE, value = TRUE)
-mph<-gsub("MPH |MHS, |(.if applicable. )", "", mph, ignore.case = TRUE)
-mphyear<-gsub("[[:alpha:]]| |,|/|-|-|\\&|\\(|\\)","", mph)
-mph<-gsub("[[:digit:]]|,|\\(|\\)|Behavioral Sciences|Epidemiology|MSPH|ScM|[^a-z A-Z]|Biochemistry|Molecular|Biology|Community|Health|Education","", mph)
+mph<-gsub("MPH |MHS, |^MSPH", "", mph, ignore.case = TRUE)
+mphyear<- gsub("[^0-9]", "", mph)
 
+mph<- strsplit(mph, ",")
+mph<- unlist(mph)
+mph<-gsub("/", "", mph, ignore.case = TRUE)
+mph<-gsub("[^a-z A-Z]", "", mph, ignore.case = TRUE)
+mph<-grep(".*University.*|.*College.*|.*Institute.*|.*School.*|.*Academy.*|NA", mph, ignore.case = TRUE, value = TRUE)
+mph<-gsub("if applicable|Behavioral Sciences","", mph, ignore.case = TRUE)
 mph<-gsub("^ +", "", mph)
+mphyear
+
+?getstr
+mph
+str
+
+
+mphyear
+
+
 mphFinal<-cbind(mph,mphyear)
 
 mphFinal<-as.data.frame(mphFinal)
@@ -135,6 +155,12 @@ mphFinal2<-cbind(mphFinal,include)
 mphFinal2<-mphFinal2[which(mphFinal2$include=="1"),]
 
 mphFinal3<- mphFinal2[,-3]
+```
+
+## Obtain counts of master degree by university
+
+```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
+
 mphtbl<-table(mph)
 
 mphdf<-as.data.frame(mphtbl)
@@ -144,45 +170,100 @@ names(mphdf) <- c("University","Count")
 mphdf<-mphdf[which(mphdf$University!="NA"),]
 ```
 
-## Plot the data
+## Obtain counts of master degree by university
 
 ```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
+mphtbl<-table(as.vector(mphFinal3[,1]))
 
-install.packages("plotly")
-library(plotly)
+mphdfFinal<-as.data.frame(mphtbl)
 
-## Need to fix Baltimore MD after Johns Hopkins
-## Why do rows 5 and 6 of mphdf not count as one row?
-## Need to order data frames (docdf and mphdf) by count
-
-pmph <- plot_ly(mphdf, labels = ~University, values = ~Count, type = 'pie') %>%
-  layout(title = 'MPH programs completed by CPFP Fellows',
-         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
-pmph
-
-pdoc <- plot_ly(docdf, labels = ~University, values = ~Count, type = 'pie') %>%
-  layout(title = 'PhD programs completed by CPFP Fellows',
-         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
-pdoc
-
-
-
-bmph <- plot_ly(mphdf, x = ~University, y = ~Count, type = 'bar', name = 'MPH', color = ~University) %>%
-    layout(title = "MPH programs completed by CPFP Fellows", yaxis = list(title = 'Count'), xaxis = list(title = "University"), barmode = 'stack')
-bmph
-
-
-bdoc <- plot_ly(docdf, x = ~University, y = ~Count, type = 'bar', name = 'PhD', color = ~University) %>%
-    layout(title = "PhD programs completed by CPFP Fellows", yaxis = list(title = 'Count'), xaxis = list(title = "University"), barmode = 'stack')
-bdoc
+names(mphdfFinal) <- c("University","Count")
 
 ```
 
-## Research Interest Wordcloud
+## Order data by count
+
+```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
+yeardf<-yeardf[order(yeardf$Year,decreasing = TRUE),]
+mphdf<-mphdf[order(mphdf$Count,decreasing = TRUE),]
+mphdfFinal<-mphdfFinal[order(mphdfFinal$Count,decreasing = TRUE),]
+docdf<-docdf[order(docdf$Count,decreasing = TRUE),]
+
+names(mphFinal3) <- c("University","Year")
+mphFinal3<-mphFinal3[order(mphFinal3$Year, mphFinal3$University,decreasing = FALSE),]
+
+
+```
+
+## Plot the mph data subset as pie charts
+
+```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
+pack<-"plotly"
+newPack <- pack[!(pack %in% installed.packages()[,"Package"])]
+if(length(newPack)) install.packages(newPack)
+
+library(plotly)
+
+pmph <- plot_ly(mphdfFinal, labels = ~University, values = ~Count, type = 'pie') %>%
+  layout(title = 'MPH programs completed by 1st year Cancer Prevention Fellows',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+pmph
+htmlwidgets::saveWidget(as.widget(pmph), "mphPie.html")
+
+```
+## Present remaining data as tables
+
+```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
+yeardf
+docdf
+
+```
+
+## Obtain Research Interest data
+```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
+pack<-c("tm","wordcloud")
+newPack <- pack[!(pack %in% installed.packages()[,"Package"])]
+if(length(newPack)) install.packages(newPack)
+library(tm)
+library(wordcloud)
+dat4
 RI <- grep("^Research Interests ", dat4, ignore.case = TRUE, value = TRUE)
 RI<-gsub("Research Interests ", "", RI, ignore.case = TRUE)
+```
+
+## Clean Research Interest data
+
+```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
+
+RI<- removePunctuation(RI)
+RI<- stripWhitespace(RI)
+RI <- removeWords(RI, stopwords("english"))
+RI <- removeWords(RI, "the")
+RI<- tolower(RI)
+```
+## Convert Research Interest to Document Term Matrix
+
+```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
+
+corp <- Corpus(VectorSource(RI))
+dtm <- DocumentTermMatrix(corp)
+tdm <- TermDocumentMatrix(corp)
+```
+
+## Create a wordcloud
+
+```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
+m <- as.matrix(tdm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+head(d, 10)
+
+wordcloud(words = corp, freq = d$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+```
 
 ## Preceptor and Branch info
 PP <- grep("Primary Preceptor", dat4, ignore.case = TRUE, value = TRUE)
