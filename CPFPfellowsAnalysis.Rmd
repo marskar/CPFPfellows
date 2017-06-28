@@ -63,6 +63,8 @@ dat2<-gsub("^Phone.{1,}|^Email.*|^Contact.*", "", dat, ignore.case = TRUE)
 dat3<-dat2[which(dat2!="")]
 dat4<-dat3[which(dat3!=" ")]
 ## dat2<-dat[-which(dat=="")] #Alternative solution
+print(dat4)
+write.csv(dat4, "CurrentFellows.csv")
 ```
 
 ## Make table of "Years of Entry"
@@ -212,7 +214,6 @@ pmph
 htmlwidgets::saveWidget(as.widget(pmph), "mphPie.html")
 
 ```
-
 ## Present remaining data as tables
 
 ```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
@@ -222,7 +223,6 @@ docdf
 ```
 
 ## Obtain Research Interest data
-
 ```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
 pack<-c("tm","wordcloud")
 newPack <- pack[!(pack %in% installed.packages()[,"Package"])]
@@ -244,93 +244,28 @@ RI <- removeWords(RI, stopwords("english"))
 RI <- removeWords(RI, "the")
 RI<- tolower(RI)
 ```
-
-
-#Tokenization
-Here I put together lists of unigrams, bigrams and trigrams.
-
-## Download ngram_tokenizer and tokenize
+## Convert Research Interest to Document Term Matrix
 
 ```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
 
-## I was not able to install RWeka package, because of a java version problem.
-## Instead of trying to figure it out, I used the ngram_tokenizer snippet
-## created by Maciej Szymkiewicz, aka zero323 on Github.
-if (!file.exists("ngram_tokenizer.R")) {
-download.file("https://raw.githubusercontent.com/zero323/r-snippets/master/R/ngram_tokenizer.R", 
-    destfile = paste(getwd(),"/ngram_tokenizer.R", sep=""))
-}
-source("ngram_Tokenizer.R")
-
-unigram_tokenizer <- ngram_tokenizer(1)
-uniList <- unigram_tokenizer(RI)
-freqNames <- as.vector(names(table(unlist(uniList))))
-freqCount <- as.numeric(table(unlist(uniList)))
-dfUni <- data.frame(Word = freqNames,
-                    Count = freqCount)
-attach(dfUni)
-dfUniSort<-dfUni[order(-Count),]
-detach(dfUni)
-
-bigram_tokenizer <- ngram_tokenizer(2)
-biList <- bigram_tokenizer(RI)
-freqNames <- as.vector(names(table(unlist(biList))))
-freqCount <- as.numeric(table(unlist(biList)))
-dfBi <- data.frame(Word = freqNames,
-                    Count = freqCount)
-attach(dfBi)
-dfBiSort<-dfBi[order(-Count),]
-detach(dfBi)
-
-trigram_tokenizer <- ngram_tokenizer(3)
-triList <- trigram_tokenizer(RI)
-freqNames <- as.vector(names(table(unlist(triList))))
-freqCount <- as.numeric(table(unlist(triList)))
-dfTri <- data.frame(Word = freqNames,
-                    Count = freqCount)
-attach(dfTri)
-dfTriSort<-dfTri[order(-Count),]
-detach(dfTri)
-
-quadgram_tokenizer <- ngram_tokenizer(4)
-quadList <- quadgram_tokenizer(RI)
-freqNames <- as.vector(names(table(unlist(quadList))))
-freqCount <- as.numeric(table(unlist(quadList)))
-dfQuad <- data.frame(Word = freqNames,
-                    Count = freqCount)
-attach(dfQuad)
-dfQuadSort<-dfQuad[order(-Count),]
-detach(dfQuad)
-
-wordbank<-rbind(dfUniSort, dfBiSort, dfTriSort, dfQuadSort)
-
-wordbank<-wordbank[order(wordbank$Count,decreasing = TRUE),]
-
-head(wordbank, n=40)
+corp <- Corpus(VectorSource(RI))
+dtm <- DocumentTermMatrix(corp)
+tdm <- TermDocumentMatrix(corp)
 ```
 
 ## Create a wordcloud
 
 ```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
-require(RColorBrewer)
-set.seed(20170304)
-colors <- brewer.pal(8, "Dark2")
-pal <- colorRampPalette(colors)
+m <- as.matrix(tdm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+head(d, 10)
+wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
 
-wc1<-wordcloud(words = dfUniSort$Word, freq = dfUniSort$Count, min.freq = 1,
-          max.words=40, random.order=FALSE, rot.per=0.35, ordered.colors = FALSE,
-          colors=pal(40))
-text(x=0.5, y=0, "Research Interest Word Cloud")
-
-
-png("RIwordcloud.png", width=3, height=3, units="in", res=300)
-wordcloud(words = dfUniSort$Word, freq = dfUniSort$Count, min.freq = 1,
-          max.words=40, random.order=FALSE, rot.per=0.35, ordered.colors = FALSE,
-          colors=pal(40))
-dev.off()
 
 ```
-# Unused code
 
 ## Preceptor and Branch info
 PP <- grep("Primary Preceptor", dat4, ignore.case = TRUE, value = TRUE)
@@ -340,7 +275,6 @@ RI
 PP
 
 ```
-
 
 
 
