@@ -56,7 +56,9 @@ close(con)
 ## Remove contact info
 
 ```{r echo=TRUE, eval=TRUE, warning=FALSE, error=FALSE}
-
+Emails<-grep("^Email", dat, ignore.case = TRUE, value = TRUE)
+Emails<-gsub("^Email ", "", Emails, ignore.case = TRUE)
+write.csv(Emails, "Emails.csv")
 dat2<-gsub("^Phone.{1,}|^Email.*|^Contact.*", "", dat, ignore.case = TRUE)
 
 ## Remove empty lines
